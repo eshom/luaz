@@ -47,6 +47,7 @@ pub fn build(b: *std.Build) void {
 
     // lib
     libmod.addCSourceFiles(.{
+        .flags = cflags,
         .files = &.{
             "src/lauxlib.c",
             "src/lbaselib.c",
