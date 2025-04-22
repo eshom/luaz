@@ -1,16 +1,10 @@
 const std = @import("std");
 
+// TODO: Cross platform + configuation
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-
-    const libmod = b.createModule(.{
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
-
-    libmod.linkSystemLibrary("m", .{});
 
     const cflags: []const []const u8 = &.{
         "-std=gnu99",
@@ -18,8 +12,26 @@ pub fn build(b: *std.Build) void {
         "-Wextra",
     };
 
+    const base_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+
+    const lib_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+
+    const luac_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+
     // core
-    libmod.addCSourceFiles(.{
+    base_mod.addCSourceFiles(.{
         .flags = cflags,
         .files = &.{
             "src/lapi.c",
@@ -46,7 +58,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // lib
-    libmod.addCSourceFiles(.{
+    base_mod.addCSourceFiles(.{
         .flags = cflags,
         .files = &.{
             "src/lauxlib.c",
@@ -64,11 +76,34 @@ pub fn build(b: *std.Build) void {
         },
     });
 
+    base_mod.addCMacro("LUA_COMPAT_5_3", "");
+    base_mod.addCMacro("LUA_USE_LINUX", "");
+
     const lib = b.addLibrary(.{
         .linkage = .static,
         .name = "lua",
-        .root_module = libmod,
+        .root_module = base_mod,
     });
 
+    const lua = b.addExecutable(.{
+        .name = "lua",
+        .root_module = lib_mod,
+    });
+
+    lua.linkLibrary(lib);
+    lua.addCSourceFile(.{ .flags = cflags, .file = b.path("src/lua.c") });
+    lua.root_module.addCMacro("LUA_USE_READLINE", "");
+    lua.linkSystemLibrary("readline");
+
+    const luac = b.addExecutable(.{
+        .name = "luac",
+        .root_module = luac_mod,
+    });
+
+    luac.linkLibrary(lib);
+    luac.addCSourceFile(.{ .flags = cflags, .file = b.path("src/luac.c") });
+
     b.installArtifact(lib);
+    b.installArtifact(lua);
+    b.installArtifact(luac);
 }
