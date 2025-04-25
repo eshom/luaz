@@ -1,16 +1,10 @@
 const std = @import("std");
 
-// TODO: Cross platform + configuation
-
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const cflags: []const []const u8 = &.{
-        "-std=gnu99",
-        "-Wall",
-        "-Wextra",
-    };
+    const use_readline = b.option(bool, "use-readline", "Linux: link with readline library") orelse false;
 
     const base_mod = b.createModule(.{
         .target = target,
@@ -29,6 +23,60 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .link_libc = true,
     });
+
+    const cflags: []const []const u8 = &.{
+        "-std=gnu99",
+        "-Wall",
+        "-Wextra",
+    };
+
+    const modules: []*std.Build.Module = &.{
+        base_mod,
+        lib_mod,
+        luac_mod,
+    };
+
+    for (modules) |m| {
+        switch (target.result.os.tag) {
+            .aix => {
+                m.addCMacro("LUA_USE_POSIX", "");
+                m.addCMacro("LUA_USE_DLOPEN", "");
+                m.linkSystemLibrary("dl");
+            },
+            .freebsd, .netbsd, .openbsd => {
+                m.addCMacro("LUA_USE_LINUX", "");
+                m.addCMacro("LUA_USE_READLINE", "");
+                m.addIncludePath(.{ .cwd_relative = "/usr/include/edit" });
+                m.linkSystemLibrary("edit");
+            },
+            .ios => {
+                m.addCMacro("LUA_USE_IOS", "");
+            },
+            .linux => {
+                m.addCMacro("LUA_USE_LINUX", "");
+                if (use_readline) {
+                    m.addCMacro("LUA_USE_READLINE", "");
+                    m.linkSystemLibrary("readline");
+                }
+                m.linkSystemLibrary("dl");
+            },
+            .macos => {
+                m.addCMacro("LUA_USE_MACOSX", "");
+                m.linkSystemLibrary("readline");
+            },
+            .solaris => {
+                m.addCMacro("LUA_USE_POSIX", "");
+                m.addCMacro("LUA_USE_DLOPEN", "");
+                m.addCMacro("_REENTRANT", "");
+                m.linkSystemLibrary("dl");
+            },
+            else => {
+                @compileError("Unsupported target");
+            },
+        }
+    }
+
+    //TODO: Mingw
 
     // core
     base_mod.addCSourceFiles(.{
