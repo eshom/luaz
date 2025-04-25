@@ -23,7 +23,7 @@ const core_src: []const []const u8 = &.{
     "src/ltm.c",
     "src/lundump.c",
     "src/lvm.c",
-    "src/lzio.c",
+    //"src/lzio.c",
 };
 
 const lib_src: []const []const u8 = &.{
@@ -55,6 +55,21 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    var translated_imports: [3]std.Build.Module.Import = .{
+        .{
+            .name = "lua_h",
+            .module = translateHeader(b, b.path("src/lua.h"), target, optimize),
+        },
+        .{
+            .name = "lmem_h",
+            .module = translateHeader(b, b.path("src/lmem.h"), target, optimize),
+        },
+        .{
+            .name = "llimits_h",
+            .module = translateHeader(b, b.path("src/llimits.h"), target, optimize),
+        },
+    };
+
     const use_readline = b.option(bool, "use-readline", "Build with readline for linux") orelse false;
     const build_shared = b.option(bool, "shared", "Build as a shared library. Always true for MinGW") orelse target.result.isMinGW();
 
@@ -63,6 +78,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .link_libc = true,
     });
+
+    base_mod.addObject(zigObject(b, "lzio", &translated_imports, target, optimize));
 
     const lib_mod = b.createModule(.{
         .target = target,
@@ -197,4 +214,35 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lib);
     b.installArtifact(lua);
     b.installArtifact(luac);
+}
+
+fn zigObject(
+    b: *std.Build,
+    comptime object_name: []const u8,
+    imports: []std.Build.Module.Import,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Step.Compile {
+    return b.addObject(.{
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = b.path("src/" ++ object_name ++ ".zig"),
+            .imports = imports,
+        }),
+        .name = object_name,
+    });
+}
+
+fn translateHeader(
+    b: *std.Build,
+    header: std.Build.LazyPath,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Module {
+    return b.addTranslateC(.{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = header,
+    }).createModule();
 }
