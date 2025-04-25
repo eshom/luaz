@@ -82,7 +82,6 @@ pub fn build(b: *std.Build) void {
         "-Wextra",
     };
 
-    // TODO: Remove if truly unecessary
     const LuaModule = union(enum) {
         base: *std.Build.Module,
         lib: *std.Build.Module,
@@ -161,7 +160,13 @@ pub fn build(b: *std.Build) void {
     });
 
     const lib = b.addLibrary(.{
-        .linkage = if (build_shared) .dynamic else .static,
+        .linkage = .static,
+        .name = if (target.result.isMinGW()) base_name ++ "54" else base_name,
+        .root_module = base_mod,
+    });
+
+    const shared = b.addLibrary(.{
+        .linkage = .dynamic,
         .name = if (target.result.isMinGW()) base_name ++ "54" else base_name,
         .root_module = base_mod,
     });
@@ -177,7 +182,11 @@ pub fn build(b: *std.Build) void {
         .root_module = lib_mod,
     });
 
-    lua.linkLibrary(lib);
+    if (build_shared) {
+        lua.linkLibrary(shared);
+    } else {
+        lua.linkLibrary(lib);
+    }
     lua.addCSourceFile(.{ .flags = cflags, .file = b.path("src/lua.c") });
 
     const luac = b.addExecutable(.{
