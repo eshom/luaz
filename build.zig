@@ -1,5 +1,6 @@
 const std = @import("std");
 
+const base_name = "lua";
 const version: std.SemanticVersion = .{ .major = 5, .minor = 4, .patch = 7 };
 
 const core_src: []const []const u8 = &.{
@@ -38,6 +39,14 @@ const lib_src: []const []const u8 = &.{
     "src/ltablib.c",
     "src/lutf8lib.c",
     "src/linit.c",
+};
+
+const lib_include: []const []const u8 = &.{
+    "lua.h",
+    "lua.hpp",
+    "luaconf.h",
+    "lualib.h",
+    "lauxlib.h",
 };
 
 const base_src = core_src ++ lib_src;
@@ -133,7 +142,7 @@ pub fn build(b: *std.Build) void {
                     m.addCMacro("LUA_BUILD_AS_DLL", "");
                 } else {
                     std.debug.panic(
-                        "Unsupported Target: arch: {}, os: {}, abi: {}",
+                        "Unsupported target: arch: {}, os: {}, abi: {}",
                         .{
                             target.result.cpu.arch,
                             target.result.os.tag,
@@ -152,12 +161,18 @@ pub fn build(b: *std.Build) void {
 
     const lib = b.addLibrary(.{
         .linkage = if (build_shared) .dynamic else .static,
-        .name = if (target.result.isMinGW()) "lua54" else "lua",
+        .name = if (target.result.isMinGW()) base_name ++ "54" else base_name,
         .root_module = base_mod,
     });
 
+    lib.installHeadersDirectory(
+        b.path("src"),
+        "",
+        .{ .include_extensions = lib_include },
+    );
+
     const lua = b.addExecutable(.{
-        .name = "lua",
+        .name = base_name,
         .root_module = lib_mod,
     });
 
@@ -165,12 +180,19 @@ pub fn build(b: *std.Build) void {
     lua.addCSourceFile(.{ .flags = cflags, .file = b.path("src/lua.c") });
 
     const luac = b.addExecutable(.{
-        .name = "luac",
+        .name = base_name ++ "c",
         .root_module = luac_mod,
     });
 
     luac.linkLibrary(lib);
     luac.addCSourceFile(.{ .flags = cflags, .file = b.path("src/luac.c") });
+
+    b.installDirectory(.{
+        .install_dir = .{ .custom = "man" },
+        .install_subdir = "man1",
+        .source_dir = b.path("doc"),
+        .include_extensions = &.{".1"},
+    });
 
     b.installArtifact(lib);
     b.installArtifact(lua);
