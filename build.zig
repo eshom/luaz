@@ -82,23 +82,13 @@ pub fn build(b: *std.Build) void {
         "-Wextra",
     };
 
-    const LuaModule = union(enum) {
-        base: *std.Build.Module,
-        lib: *std.Build.Module,
-        luac: *std.Build.Module,
+    const modules: [3]*std.Build.Module = .{
+        base_mod,
+        lib_mod,
+        luac_mod,
     };
 
-    const modules: [3]LuaModule = .{
-        .{ .base = base_mod },
-        .{ .lib = lib_mod },
-        .{ .luac = luac_mod },
-    };
-
-    for (modules) |mod| {
-        const m = out: switch (mod) {
-            inline else => |m| break :out m,
-        };
-
+    for (modules) |m| {
         // Not necessary but included to match original Makefile
         if (!target.result.isMinGW()) {
             m.linkSystemLibrary("m", .{});
