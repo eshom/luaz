@@ -1,10 +1,53 @@
 const std = @import("std");
 
+const version: std.SemanticVersion = .{ .major = 5, .minor = 4, .patch = 7 };
+
+const core_src: []const []const u8 = &.{
+    "src/lapi.c",
+    "src/lcode.c",
+    "src/lctype.c",
+    "src/ldebug.c",
+    "src/ldo.c",
+    "src/ldump.c",
+    "src/lfunc.c",
+    "src/lgc.c",
+    "src/llex.c",
+    "src/lmem.c",
+    "src/lobject.c",
+    "src/lopcodes.c",
+    "src/lparser.c",
+    "src/lstate.c",
+    "src/lstring.c",
+    "src/ltable.c",
+    "src/ltm.c",
+    "src/lundump.c",
+    "src/lvm.c",
+    "src/lzio.c",
+};
+
+const lib_src: []const []const u8 = &.{
+    "src/lauxlib.c",
+    "src/lbaselib.c",
+    "src/lcorolib.c",
+    "src/ldblib.c",
+    "src/liolib.c",
+    "src/lmathlib.c",
+    "src/loadlib.c",
+    "src/loslib.c",
+    "src/lstrlib.c",
+    "src/ltablib.c",
+    "src/lutf8lib.c",
+    "src/linit.c",
+};
+
+const base_src = core_src ++ lib_src;
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const use_readline = b.option(bool, "use-readline", "Linux: link with readline library") orelse false;
+    const use_readline = b.option(bool, "use-readline", "Build with readline for linux") orelse false;
+    const build_shared = b.option(bool, "shared", "Build as a shared library. Always true for MinGW") orelse target.result.isMinGW();
 
     const base_mod = b.createModule(.{
         .target = target,
@@ -30,24 +73,39 @@ pub fn build(b: *std.Build) void {
         "-Wextra",
     };
 
-    const modules: []*std.Build.Module = &.{
-        base_mod,
-        lib_mod,
-        luac_mod,
+    const LuaModule = union(enum) {
+        base: *std.Build.Module,
+        lib: *std.Build.Module,
+        luac: *std.Build.Module,
     };
 
-    for (modules) |m| {
+    const modules: [3]LuaModule = .{
+        .{ .base = base_mod },
+        .{ .lib = lib_mod },
+        .{ .luac = luac_mod },
+    };
+
+    for (modules) |mod| {
+        const m = out: switch (mod) {
+            inline else => |m| break :out m,
+        };
+
+        // Not necessary but included to match original Makefile
+        if (!target.result.isMinGW()) {
+            m.linkSystemLibrary("m", .{});
+        }
+
         switch (target.result.os.tag) {
             .aix => {
                 m.addCMacro("LUA_USE_POSIX", "");
                 m.addCMacro("LUA_USE_DLOPEN", "");
-                m.linkSystemLibrary("dl");
+                m.linkSystemLibrary("dl", .{});
             },
             .freebsd, .netbsd, .openbsd => {
                 m.addCMacro("LUA_USE_LINUX", "");
                 m.addCMacro("LUA_USE_READLINE", "");
                 m.addIncludePath(.{ .cwd_relative = "/usr/include/edit" });
-                m.linkSystemLibrary("edit");
+                m.linkSystemLibrary("edit", .{});
             },
             .ios => {
                 m.addCMacro("LUA_USE_IOS", "");
@@ -56,80 +114,45 @@ pub fn build(b: *std.Build) void {
                 m.addCMacro("LUA_USE_LINUX", "");
                 if (use_readline) {
                     m.addCMacro("LUA_USE_READLINE", "");
-                    m.linkSystemLibrary("readline");
+                    m.linkSystemLibrary("readline", .{});
                 }
-                m.linkSystemLibrary("dl");
+                m.linkSystemLibrary("dl", .{});
             },
             .macos => {
                 m.addCMacro("LUA_USE_MACOSX", "");
-                m.linkSystemLibrary("readline");
+                m.linkSystemLibrary("readline", .{});
             },
             .solaris => {
                 m.addCMacro("LUA_USE_POSIX", "");
                 m.addCMacro("LUA_USE_DLOPEN", "");
                 m.addCMacro("_REENTRANT", "");
-                m.linkSystemLibrary("dl");
+                m.linkSystemLibrary("dl", .{});
             },
             else => {
-                @compileError("Unsupported target");
+                if (target.result.isMinGW()) {
+                    m.addCMacro("LUA_BUILD_AS_DLL", "");
+                } else {
+                    std.debug.panic(
+                        "Unsupported Target: arch: {}, os: {}, abi: {}",
+                        .{
+                            target.result.cpu.arch,
+                            target.result.os.tag,
+                            target.result.abi,
+                        },
+                    );
+                }
             },
         }
     }
 
-    //TODO: Mingw
-
-    // core
     base_mod.addCSourceFiles(.{
         .flags = cflags,
-        .files = &.{
-            "src/lapi.c",
-            "src/lcode.c",
-            "src/lctype.c",
-            "src/ldebug.c",
-            "src/ldo.c",
-            "src/ldump.c",
-            "src/lfunc.c",
-            "src/lgc.c",
-            "src/llex.c",
-            "src/lmem.c",
-            "src/lobject.c",
-            "src/lopcodes.c",
-            "src/lparser.c",
-            "src/lstate.c",
-            "src/lstring.c",
-            "src/ltable.c",
-            "src/ltm.c",
-            "src/lundump.c",
-            "src/lvm.c",
-            "src/lzio.c",
-        },
+        .files = base_src,
     });
-
-    // lib
-    base_mod.addCSourceFiles(.{
-        .flags = cflags,
-        .files = &.{
-            "src/lauxlib.c",
-            "src/lbaselib.c",
-            "src/lcorolib.c",
-            "src/ldblib.c",
-            "src/liolib.c",
-            "src/lmathlib.c",
-            "src/loadlib.c",
-            "src/loslib.c",
-            "src/lstrlib.c",
-            "src/ltablib.c",
-            "src/lutf8lib.c",
-            "src/linit.c",
-        },
-    });
-
-    base_mod.addCMacro("LUA_COMPAT_5_3", "");
-    base_mod.addCMacro("LUA_USE_LINUX", "");
 
     const lib = b.addLibrary(.{
-        .linkage = .static,
-        .name = "lua",
+        .linkage = if (build_shared) .dynamic else .static,
+        .name = if (target.result.isMinGW()) "lua54" else "lua",
         .root_module = base_mod,
     });
 
@@ -140,8 +163,6 @@ pub fn build(b: *std.Build) void {
 
     lua.linkLibrary(lib);
     lua.addCSourceFile(.{ .flags = cflags, .file = b.path("src/lua.c") });
-    lua.root_module.addCMacro("LUA_USE_READLINE", "");
-    lua.linkSystemLibrary("readline");
 
     const luac = b.addExecutable(.{
         .name = "luac",
