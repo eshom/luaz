@@ -13,7 +13,7 @@ pub const ZIO = extern struct {
     p: [*:0]const u8, // current position in buffer
     reader: clua.lua_Reader, // reader function
     data: ?*anyopaque, // additional data
-    L: clua.lua_State, // Lua state (for reader)
+    L: *clua.lua_State, // Lua state (for reader)
 };
 
 pub const Mbuffer = extern struct {
@@ -35,11 +35,11 @@ pub fn zgetc(z: anytype) u8 {
 }
 
 fn luaZ_fill(z: *ZIO) callconv(.c) c_int {
-    const size: usize = undefined; // out param
+    var size: usize = undefined; // out param
     const L: *clua.lua_State = z.L;
 
     // lua_unlock(L)
-    const buff: ?[:0]const u8 = z.reader.?(L, z.data, &size);
+    const buff: ?[*:0]const u8 = z.reader.?(L, z.data, &size);
     // lua_lock(L)
 
     if (buff == null or size == 0) {

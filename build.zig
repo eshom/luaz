@@ -55,7 +55,7 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    var translated_imports: [3]std.Build.Module.Import = .{
+    var translated_imports: [4]std.Build.Module.Import = .{
         .{
             .name = "lua_h",
             .module = translateHeader(b, b.path("src/lua.h"), target, optimize),
@@ -67,6 +67,10 @@ pub fn build(b: *std.Build) void {
         .{
             .name = "llimits_h",
             .module = translateHeader(b, b.path("src/llimits.h"), target, optimize),
+        },
+        .{
+            .name = "lstate_h",
+            .module = translateHeader(b, b.path("src/lstate.h"), target, optimize),
         },
     };
 
