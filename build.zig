@@ -82,6 +82,7 @@ pub fn build(b: *std.Build) void {
         "-Wextra",
     };
 
+    // TODO: Remove if truly unecessary
     const LuaModule = union(enum) {
         base: *std.Build.Module,
         lib: *std.Build.Module,
