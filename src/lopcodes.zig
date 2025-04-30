@@ -98,18 +98,18 @@ pub inline fn sC2int(i: comptime_int) comptime_int {
 // TODO: Why triple NOT?
 
 /// creates a mask with 'n' 1 bits at position 'p'
-pub inline fn MASK1(n: anytype, p: anytype) comptime_int {
+pub inline fn MASK1(n: anytype, p: anytype) @TypeOf(n, p) {
     return ~(~0 << n) << p;
 }
 
 /// creates a mask with 'n' 0 bits at position 'p'
-pub inline fn MASK0(n: anytype, p: anytype) comptime_int {
+pub inline fn MASK0(n: anytype, p: anytype) @TypeOf(n, p) {
     return ~MASK1(n, p);
 }
 
 // the following Macros help to manipulate instructions
 
-pub inline fn GET_OPCODE(i: anytype) comptime_int {
+pub inline fn GET_OPCODE(i: anytype) @TypeOf(i) {
     return (i >> POS_OP) & MASK1(SIZE_OP, 0);
 }
 
@@ -117,7 +117,7 @@ pub inline fn SET_OPCODE(i: anytype, o: anytype) void {
     i = (i & MASK0(SIZE_OP, POS_OP)) | ((o << POS_OP) & MASK1(SIZE_OP, POS_OP));
 }
 
-pub inline fn checkopm(i: anytype, m: anytype) comptime_int {
+pub inline fn checkopm(i: anytype, m: anytype) @TypeOf(i, m) {
     getOpMode(GET_OPCODE(i)) == m;
 }
 
@@ -142,23 +142,23 @@ pub inline fn SETARG_A(i: anytype, v: anytype) void {
     setarg(i, v, POS_A, SIZE_A);
 }
 
-pub inline fn GETARG_B(i: anytype) comptime_int {
-    check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_B, SIZE_B));
+pub inline fn GETARG_B(i: anytype) @TypeOf(i) {
+    climits.check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_B, SIZE_B));
 }
 
-pub inline fn GETARG_sB(i: anytype) comptime_int {
+pub inline fn GETARG_sB(i: anytype) @TypeOf(i) {
     sC2int(GETARG_B(i));
 }
 
-pub inline fn SETARG_B(i: anytype) void {
+pub inline fn SETARG_B(i: anytype, v: anytype) void {
     setarg(i, v, POS_B, SIZE_B);
 }
 
-pub inline fn GETARG_C(i: anytype) comptime_int {
-    check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_C, SIZE_C));
+pub inline fn GETARG_C(i: anytype) @TypeOf(i) {
+    climits.check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_C, SIZE_C));
 }
 
-pub inline fn GETARG_sC(i: anytype) comptime_int {
+pub inline fn GETARG_sC(i: anytype) @TypeOf(i) {
     sC2int(GETARG_C(i));
 }
 
@@ -166,44 +166,44 @@ pub inline fn SETARG_C(i: anytype, v: anytype) void {
     setarg(i, v, POS_C, SIZE_C);
 }
 
-pub inline fn TESTARG_k(i: anytype) comptime_int {
-    check_exp(checkopm(i, OpMode.iABC), i & (1 << POS_k));
+pub inline fn TESTARG_k(i: anytype) @TypeOf(i) {
+    climits.check_exp(checkopm(i, OpMode.iABC), i & (1 << POS_k));
 }
 
-pub inline fn GETARG_k(i: anytype) comptime_int {
-    check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_k, 1));
+pub inline fn GETARG_k(i: anytype) @TypeOf(i) {
+    climits.check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_k, 1));
 }
 
 pub inline fn SETARG_k(i: anytype, v: anytype) void {
     setarg(i, v, POS_k, 1);
 }
 
-pub inline fn GETARG_Bx(i: anytype) comptime_int {
-    check_exp(checkopm(i, OpMode.iABx), getarg(i, POS_Bx, SIZE_Bx));
+pub inline fn GETARG_Bx(i: anytype) @TypeOf(i) {
+    climits.check_exp(checkopm(i, OpMode.iABx), getarg(i, POS_Bx, SIZE_Bx));
 }
 
 pub inline fn SETARG_Bx(i: anytype, v: anytype) void {
     setarg(i, v, POS_Bx, SIZE_Bx);
 }
 
-pub inline fn GETARG_Ax(i: anytype) comptime_int {
-    check_exp(checkopm(i, OpMode.iAx), getarg(i, POS_Ax, SIZE_Ax));
+pub inline fn GETARG_Ax(i: anytype) @TypeOf(i) {
+    climits.check_exp(checkopm(i, OpMode.iAx), getarg(i, POS_Ax, SIZE_Ax));
 }
 
 pub inline fn SETARG_Ax(i: anytype, v: comptime_int) void {
     setarg(i, v, POS_Ax, SIZE_Ax);
 }
 
-pub inline fn GETARG_sBx(i: anytype) comptime_int {
-    check_exp(checkopm(i, OpMode.iAsBx), getarg(i, POS_Bx, SIZE_Bx) - OFFSET_sBx);
+pub inline fn GETARG_sBx(i: anytype) @TypeOf(i) {
+    climits.check_exp(checkopm(i, OpMode.iAsBx), getarg(i, POS_Bx, SIZE_Bx) - OFFSET_sBx);
 }
 
 pub inline fn SETARG_sBx(i: anytype, b: anytype) void {
     SETARG_Bx(i, b + OFFSET_sBx);
 }
 
-pub inline fn GETARG_sJ(i: anytype) comptime_int {
-    check_exp(checkopm(i, OpMode.isJ), getarg(i, POS_sJ, SIZE_sJ) - OFFSET_sJ);
+pub inline fn GETARG_sJ(i: anytype) @TypeOf(i) {
+    climits.check_exp(checkopm(i, OpMode.isJ), getarg(i, POS_sJ, SIZE_sJ) - OFFSET_sJ);
 }
 
 pub inline fn SETARG_sJ(i: anytype, j: anytype) void {
