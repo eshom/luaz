@@ -66,7 +66,7 @@ pub inline fn luaZ_freebuffer(L: *clua.lua_State, buff: *Mbuffer) void {
     luaZ_resizebuffer(L, buff, 0);
 }
 
-fn luaZ_fill(z: *ZIO) callconv(.c) c_int {
+pub fn luaZ_fill(z: *ZIO) callconv(.c) c_int {
     var size: usize = undefined; // out param
     const L: *clua.lua_State = z.L;
 
@@ -86,7 +86,7 @@ fn luaZ_fill(z: *ZIO) callconv(.c) c_int {
     return pout.?[0];
 }
 
-fn luaZ_init(L: *clua.lua_State, z: *ZIO, reader: clua.lua_Reader, data: ?*anyopaque) callconv(.c) void {
+pub fn luaZ_init(L: *clua.lua_State, z: *ZIO, reader: clua.lua_Reader, data: ?*anyopaque) callconv(.c) void {
     z.L = L;
     z.reader = reader;
     z.data = data;
@@ -95,7 +95,7 @@ fn luaZ_init(L: *clua.lua_State, z: *ZIO, reader: clua.lua_Reader, data: ?*anyop
 }
 
 /// read next n bytes
-fn luaZ_read(z: *ZIO, b: ?*anyopaque, n: usize) callconv(.c) usize {
+pub fn luaZ_read(z: *ZIO, b: ?*anyopaque, n: usize) callconv(.c) usize {
     var n_mut = n;
     while (n_mut != 0) {
         if (z.n == 0) { // no bytes in buffer?
