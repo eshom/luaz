@@ -15,7 +15,7 @@ const core_src: []const []const u8 = &.{
     "src/llex.c",
     "src/lmem.c",
     "src/lobject.c",
-    "src/lopcodes.c",
+    // "src/lopcodes.c",
     "src/lparser.c",
     "src/lstate.c",
     "src/lstring.c",
@@ -88,6 +88,7 @@ pub fn build(b: *std.Build) void {
     });
 
     base_mod.addObject(zigObject(b, "lzio", &translated_imports, target, optimize));
+    base_mod.addObject(zigObject(b, "lopcodes", &translated_imports, target, optimize));
 
     const lib_mod = b.createModule(.{
         .target = target,
