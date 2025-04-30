@@ -15,7 +15,6 @@
 //!   corresponding unsigned argument.
 
 const climits = @import("llimits_h");
-const cconf = @import("luaconf_h");
 
 const std = @import("std");
 
@@ -523,9 +522,39 @@ pub const luaP_opmodes: [NUM_OPCODES]climits.lu_byte = .{
     opmode(0, 0, 0, 0, 0, OpMode.iAx), //  OP_EXTRAARG
 };
 
-// pub inline fn getOpMode(m: anytype) OpMode {
-//     return luaP_opmodes
-// }
+pub inline fn getOpMode(m: comptime_int) OpMode {
+    return @enumFromInt(luaP_opmodes[m] & 7);
+}
+
+pub inline fn testAMode(m: comptime_int) OpMode {
+    return @enumFromInt(luaP_opmodes[m] & (1 << 3));
+}
+
+pub inline fn testTMode(m: comptime_int) OpMode {
+    return @enumFromInt(luaP_opmodes[m] & (1 << 4));
+}
+
+pub inline fn testITMode(m: comptime_int) OpMode {
+    return @enumFromInt(luaP_opmodes[m] & (1 << 5));
+}
+
+pub inline fn testOTMode(m: comptime_int) OpMode {
+    return @enumFromInt(luaP_opmodes[m] & (1 << 6));
+}
+
+pub inline fn testMMMode(m: comptime_int) OpMode {
+    return @enumFromInt(luaP_opmodes[m] & (1 << 7));
+}
+
+/// "out top" (set top for next instruction)
+pub inline fn isOT(i: anytype) bool {
+    return (testOTMode(GET_OPCODE(i)) and GETARG_C(i) == 0) or
+        GET_OPCODE(i) == OpCode.OP_TAILCALL;
+}
+
+pub inline fn isIT(i: anytype) bool {
+    return testITMode(GET_OPCODE(i)) and GETARG_B(i) == 0;
+}
 
 pub inline fn opmode(
     mm: anytype,
@@ -537,3 +566,5 @@ pub inline fn opmode(
 ) @TypeOf(mm, ot, it, t, a, m) {
     return (((mm) << 7) | ((ot) << 6) | ((it) << 5) | ((t) << 4) | ((a) << 3) | (m));
 }
+
+pub const LFIELDS_PER_FLUSH = 50;
