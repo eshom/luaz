@@ -87,8 +87,10 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
 
-    base_mod.addObject(zigObject(b, "lzio", &translated_imports, target, optimize));
-    base_mod.addObject(zigObject(b, "lopcodes", &translated_imports, target, optimize));
+    const zig_lzio = zigObject(b, "lzio", &translated_imports, target, optimize);
+    const zig_lopcodes = zigObject(b, "lopcodes", &translated_imports, target, optimize);
+    base_mod.addObject(zig_lzio);
+    base_mod.addObject(zig_lopcodes);
 
     const lib_mod = b.createModule(.{
         .target = target,
@@ -223,6 +225,10 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lib);
     b.installArtifact(lua);
     b.installArtifact(luac);
+
+    const check = b.step("check", "Check step for LSP");
+    check.dependOn(&zig_lzio.step);
+    check.dependOn(&zig_lopcodes.step);
 }
 
 fn zigObject(
