@@ -70,6 +70,8 @@ pub fn luaZ_fill(z: *ZIO) callconv(.c) c_int {
     var size: usize = undefined; // out param
     const L: *clua.lua_State = z.L;
 
+    // TODO: figure out lua_unlock
+
     // lua_unlock(L)
     const buff: ?[*:0]const u8 = z.reader.?(L, z.data, &size);
     // lua_lock(L)
