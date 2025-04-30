@@ -557,14 +557,14 @@ pub inline fn isIT(i: anytype) bool {
 }
 
 pub inline fn opmode(
-    mm: anytype,
-    ot: anytype,
-    it: anytype,
-    t: anytype,
-    a: anytype,
-    m: anytype,
-) @TypeOf(mm, ot, it, t, a, m) {
-    return (((mm) << 7) | ((ot) << 6) | ((it) << 5) | ((t) << 4) | ((a) << 3) | (m));
+    mm: comptime_int,
+    ot: comptime_int,
+    it: comptime_int,
+    t: comptime_int,
+    a: comptime_int,
+    m: OpMode,
+) comptime_int {
+    return (((mm) << 7) | ((ot) << 6) | ((it) << 5) | ((t) << 4) | ((a) << 3) | (@intFromEnum(m)));
 }
 
 pub const LFIELDS_PER_FLUSH = 50;
