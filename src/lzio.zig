@@ -105,29 +105,30 @@ pub fn luaZ_init(L: *clua.lua_State, z: *ZIO, reader: clua.lua_Reader, data: ?*a
 }
 
 /// read next n bytes
-pub fn luaZ_read(z: *ZIO, b: ?*anyopaque, n: usize) callconv(.c) usize {
-    var n_mut = n;
-    while (n_mut != 0) {
+pub fn luaZ_read(z: *ZIO, arg_b: ?*anyopaque, arg_n: usize) callconv(.c) usize {
+    var b = arg_b;
+    var n = arg_n;
+
+    while (n != 0) {
         if (z.n == 0) { // no bytes in buffer?
             if (luaZ_fill(z) == EOZ) { // try to read more
-                return n_mut; // no more input; return number of missing bytes
+                return n; // no more input; return number of missing bytes
             } else {
-                z.n += 1; // luaZ_fill consumed first byte; put it back
+                z.n +%= 1; // luaZ_fill consumed first byte; put it back
                 z.p.? -= 1;
             }
         }
 
-        const m = if (n_mut <= z.n) n_mut else z.n; // min. between n and z.n
+        const m = if (n <= z.n) n else z.n; // min. between n and z.n
 
         _ = c.memcpy(b, z.p, m);
-        z.n -= m;
+        z.n -%= m;
         z.p.? += m;
 
-        // TODO: What is this part for?
-        var b_mut: [*]const u8 = @alignCast(@ptrCast(b.?));
-        b_mut = b_mut + m;
-
-        n_mut -= m;
+        const ptr: ?[*]u8 = @ptrCast(@alignCast(b));
+        b = ptr.? + m;
+        n -%= m;
     }
+
     return 0;
 }
