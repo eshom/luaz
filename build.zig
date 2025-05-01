@@ -3,6 +3,12 @@ const std = @import("std");
 const base_name = "lua";
 const version: std.SemanticVersion = .{ .major = 5, .minor = 4, .patch = 7 };
 
+const TestSuiteLevel = enum {
+    basic,
+    complete,
+    internal,
+};
+
 const core_src: []const []const u8 = &.{
     "src/lapi.c",
     "src/lcode.c",
@@ -226,6 +232,79 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lua);
     b.installArtifact(luac);
 
+    // Complete Test Suite Libs
+    // TODO: Add internal tests, Windows support? Better step dependencies?
+
+    const ts_level = b.option(TestSuiteLevel, "test-suite-level", "Lua test suite level (default = basic)") orelse .basic;
+    if (ts_level == .internal) @panic("Not Implemented");
+
+    const ts_lib_names: []const []const u8 = &.{ "1", "11", "2", "21", "2-v2" };
+    const ts_source_names: []const []const u8 = &.{ "lib1.c", "lib11.c", "lib2.c", "lib21.c", "lib22.c" };
+
+    const test_suite_libs = b.step("test-suite-libs", "Compile lua test suite libraries");
+
+    const run_test_suite = b.addSystemCommand(&.{
+        "../zig-out/bin/lua",
+        if (ts_level == .basic) "-e _U=true" else "",
+        "all.lua",
+    });
+
+    run_test_suite.setCwd(b.path("tests"));
+    run_test_suite.step.dependOn(&lua.step);
+
+    inline for (ts_lib_names, ts_source_names) |libname, source| {
+        const ts_mod = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+            .pic = true,
+        });
+
+        ts_mod.addIncludePath(b.path("zig-out/include"));
+
+        if (build_shared) {
+            ts_mod.linkLibrary(shared);
+        } else {
+            ts_mod.linkLibrary(lib);
+        }
+
+        ts_mod.addCSourceFile(.{
+            .file = b.path("tests/libs/" ++ source),
+            .flags = cflags,
+        });
+
+        const ts_lib = b.addLibrary(.{
+            .linkage = .dynamic,
+            .name = libname,
+            .root_module = ts_mod,
+        });
+
+        const install = b.addInstallArtifact(ts_lib, .{
+            .dest_dir = .{
+                .override = .{ .custom = "tests/libs" },
+            },
+        });
+
+        ts_lib.step.dependOn(b.getInstallStep());
+        test_suite_libs.dependOn(&install.step);
+    }
+
+    const run_copy_files = b.addRunArtifact(b.addExecutable(
+        .{
+            .name = "install_test_libs",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("install_test_libs.zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
+        },
+    ));
+    run_copy_files.step.dependOn(test_suite_libs);
+    run_test_suite.step.dependOn(&run_copy_files.step);
+
+    b.step("test-suite", "Run lua test suite").dependOn(&run_test_suite.step);
+
+    // LSP check step
     const check = b.step("check", "Check step for LSP");
     check.dependOn(&zig_lzio.step);
     check.dependOn(&zig_lopcodes.step);

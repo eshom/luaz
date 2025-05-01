@@ -1,2 +1,9 @@
 zig-out/
 .zig-cache/
+
+# Test Suite
+tests/libs/*.so
+tests/libs/*.dylib
+tests/libs/*.dll
+tests/libs/*.pdb
+tests/libs/all
