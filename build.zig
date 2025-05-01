@@ -243,11 +243,21 @@ pub fn build(b: *std.Build) void {
 
     const test_suite_libs = b.step("test-suite-libs", "Compile lua test suite libraries");
 
-    const run_test_suite = b.addSystemCommand(&.{
-        "../zig-out/bin/lua",
-        if (ts_level == .basic) "-e _U=true" else "",
-        "all.lua",
-    });
+    const run_test_suite = D: switch (ts_level) {
+        .basic => {
+            break :D b.addSystemCommand(&.{
+                "../zig-out/bin/lua",
+                "-e _U=true",
+                "all.lua",
+            });
+        },
+        else => {
+            break :D b.addSystemCommand(&.{
+                "../zig-out/bin/lua",
+                "all.lua",
+            });
+        },
+    };
 
     run_test_suite.setCwd(b.path("tests"));
     run_test_suite.step.dependOn(b.getInstallStep());
