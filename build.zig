@@ -61,34 +61,10 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    var translated_imports: [7]std.Build.Module.Import = .{
+    var translated_imports: [1]std.Build.Module.Import = .{
         .{
             .name = "lua_h",
-            .module = translateHeader(b, b.path("src/lua.h"), target, optimize),
-        },
-        .{
-            .name = "lmem_h",
-            .module = translateHeader(b, b.path("src/lmem.h"), target, optimize),
-        },
-        .{
-            .name = "llimits_h",
-            .module = translateHeader(b, b.path("src/llimits.h"), target, optimize),
-        },
-        .{
-            .name = "lstate_h",
-            .module = translateHeader(b, b.path("src/lstate.h"), target, optimize),
-        },
-        .{
-            .name = "luaconf_h", // public api header
-            .module = translateHeader(b, b.path("src/luaconf.h"), target, optimize),
-        },
-        .{
-            .name = "lualib_h", // public api header
-            .module = translateHeader(b, b.path("src/lualib.h"), target, optimize),
-        },
-        .{
-            .name = "lauxlib_h", // public api header
-            .module = translateHeader(b, b.path("src/lauxlib.h"), target, optimize),
+            .module = translateHeader(b, b.path("src/megaheader.h"), target, optimize),
         },
     };
 

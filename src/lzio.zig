@@ -1,6 +1,4 @@
 const clua = @import("lua_h");
-const cmem = @import("lmem_h");
-const climits = @import("llimits_h");
 const c = @import("c.zig");
 
 comptime {
@@ -66,7 +64,7 @@ pub inline fn luaZ_buffremove(buff: *Mbuffer, i: comptime_int) void {
 
 pub inline fn luaZ_resizebuffer(L: *clua.lua_State, buff: *Mbuffer, size: comptime_int) void {
     @compileLog(L, buff, size);
-    buff.buffer = cmem.luaM_reallocvchar(L, buff.buffer, buff.buffsize, size);
+    buff.buffer = clua.luaM_reallocvchar(L, buff.buffer, buff.buffsize, size);
 }
 
 pub inline fn luaZ_freebuffer(L: *clua.lua_State, buff: *Mbuffer) void {

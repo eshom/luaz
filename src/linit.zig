@@ -18,31 +18,29 @@ pub const linit_c = "";
 pub const LUA_LIB = "";
 
 const clua = @import("lua_h");
-const clualib = @import("lualib_h");
-const cauxlib = @import("lauxlib_h");
 
 /// these libs are loaded by lua.c and are readily available to any Lua
 /// program
-const loadedlibs: [11]cauxlib.luaL_Reg = .{
-    .{ .name = cauxlib.LUA_GNAME, .func = &clualib.luaopen_base },
-    .{ .name = clualib.LUA_LOADLIBNAME, .func = &clualib.luaopen_package },
-    .{ .name = clualib.LUA_COLIBNAME, .func = &clualib.luaopen_coroutine },
-    .{ .name = clualib.LUA_TABLIBNAME, .func = &clualib.luaopen_table },
-    .{ .name = clualib.LUA_IOLIBNAME, .func = &clualib.luaopen_io },
-    .{ .name = clualib.LUA_OSLIBNAME, .func = &clualib.luaopen_os },
-    .{ .name = clualib.LUA_STRLIBNAME, .func = &clualib.luaopen_string },
-    .{ .name = clualib.LUA_MATHLIBNAME, .func = &clualib.luaopen_math },
-    .{ .name = clualib.LUA_UTF8LIBNAME, .func = &clualib.luaopen_utf8 },
-    .{ .name = clualib.LUA_DBLIBNAME, .func = &clualib.luaopen_debug },
+const loadedlibs: [11]clua.luaL_Reg = .{
+    .{ .name = clua.LUA_GNAME, .func = &clua.luaopen_base },
+    .{ .name = clua.LUA_LOADLIBNAME, .func = &clua.luaopen_package },
+    .{ .name = clua.LUA_COLIBNAME, .func = &clua.luaopen_coroutine },
+    .{ .name = clua.LUA_TABLIBNAME, .func = &clua.luaopen_table },
+    .{ .name = clua.LUA_IOLIBNAME, .func = &clua.luaopen_io },
+    .{ .name = clua.LUA_OSLIBNAME, .func = &clua.luaopen_os },
+    .{ .name = clua.LUA_STRLIBNAME, .func = &clua.luaopen_string },
+    .{ .name = clua.LUA_MATHLIBNAME, .func = &clua.luaopen_math },
+    .{ .name = clua.LUA_UTF8LIBNAME, .func = &clua.luaopen_utf8 },
+    .{ .name = clua.LUA_DBLIBNAME, .func = &clua.luaopen_debug },
     .{ .name = null, .func = null },
 };
 
-pub export fn luaL_opeblibs(L: *clua.lua_State) void {
+pub export fn luaL_openlibs(L: *clua.lua_State) callconv(.c) void {
     // "require" functions from 'loadedlibs' and set results to global table
     for (loadedlibs) |lib| {
         // zig doesn't need this null terminator but that's how it was done in C code
         if (lib.func == null) break;
-        cauxlib.luaL_requiref(L, lib.name, lib.func, 1);
-        cauxlib.lua_pop(L, 1); // remove lib
+        clua.luaL_requiref(L, lib.name, lib.func, 1);
+        clua.lua_pop(L, 1); // remove lib
     }
 }

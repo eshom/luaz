@@ -14,7 +14,7 @@
 //!   the written unsigned value minus K, where K is half the maximum for the
 //!   corresponding unsigned argument.
 
-const climits = @import("llimits_h");
+const clua = @import("lua_h");
 
 const std = @import("std");
 
@@ -153,7 +153,7 @@ pub inline fn SETARG_A(i: anytype, v: anytype) void {
 
 pub inline fn GETARG_B(i: anytype) @TypeOf(i) {
     @compileLog(i);
-    climits.check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_B, SIZE_B));
+    clua.check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_B, SIZE_B));
 }
 
 pub inline fn GETARG_sB(i: anytype) @TypeOf(i) {
@@ -168,7 +168,7 @@ pub inline fn SETARG_B(i: anytype, v: anytype) void {
 
 pub inline fn GETARG_C(i: anytype) @TypeOf(i) {
     @compileLog(i);
-    climits.check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_C, SIZE_C));
+    clua.check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_C, SIZE_C));
 }
 
 pub inline fn GETARG_sC(i: anytype) @TypeOf(i) {
@@ -183,12 +183,12 @@ pub inline fn SETARG_C(i: anytype, v: anytype) void {
 
 pub inline fn TESTARG_k(i: anytype) @TypeOf(i) {
     @compileLog(i);
-    climits.check_exp(checkopm(i, OpMode.iABC), i & (1 << POS_k));
+    clua.check_exp(checkopm(i, OpMode.iABC), i & (1 << POS_k));
 }
 
 pub inline fn GETARG_k(i: anytype) @TypeOf(i) {
     @compileLog(i);
-    climits.check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_k, 1));
+    clua.check_exp(checkopm(i, OpMode.iABC), getarg(i, POS_k, 1));
 }
 
 pub inline fn SETARG_k(i: anytype, v: anytype) void {
@@ -198,7 +198,7 @@ pub inline fn SETARG_k(i: anytype, v: anytype) void {
 
 pub inline fn GETARG_Bx(i: anytype) @TypeOf(i) {
     @compileLog(i);
-    climits.check_exp(checkopm(i, OpMode.iABx), getarg(i, POS_Bx, SIZE_Bx));
+    clua.check_exp(checkopm(i, OpMode.iABx), getarg(i, POS_Bx, SIZE_Bx));
 }
 
 pub inline fn SETARG_Bx(i: anytype, v: anytype) void {
@@ -208,7 +208,7 @@ pub inline fn SETARG_Bx(i: anytype, v: anytype) void {
 
 pub inline fn GETARG_Ax(i: anytype) @TypeOf(i) {
     @compileLog(i);
-    climits.check_exp(checkopm(i, OpMode.iAx), getarg(i, POS_Ax, SIZE_Ax));
+    clua.check_exp(checkopm(i, OpMode.iAx), getarg(i, POS_Ax, SIZE_Ax));
 }
 
 pub inline fn SETARG_Ax(i: anytype, v: comptime_int) void {
@@ -218,7 +218,7 @@ pub inline fn SETARG_Ax(i: anytype, v: comptime_int) void {
 
 pub inline fn GETARG_sBx(i: anytype) @TypeOf(i) {
     @compileLog(i);
-    climits.check_exp(checkopm(i, OpMode.iAsBx), getarg(i, POS_Bx, SIZE_Bx) - OFFSET_sBx);
+    clua.check_exp(checkopm(i, OpMode.iAsBx), getarg(i, POS_Bx, SIZE_Bx) - OFFSET_sBx);
 }
 
 pub inline fn SETARG_sBx(i: anytype, b: anytype) void {
@@ -228,7 +228,7 @@ pub inline fn SETARG_sBx(i: anytype, b: anytype) void {
 
 pub inline fn GETARG_sJ(i: anytype) @TypeOf(i) {
     @compileLog(i);
-    climits.check_exp(checkopm(i, OpMode.isJ), getarg(i, POS_sJ, SIZE_sJ) - OFFSET_sJ);
+    clua.check_exp(checkopm(i, OpMode.isJ), getarg(i, POS_sJ, SIZE_sJ) - OFFSET_sJ);
 }
 
 pub inline fn SETARG_sJ(i: anytype, j: anytype) void {
@@ -237,35 +237,35 @@ pub inline fn SETARG_sJ(i: anytype, j: anytype) void {
 }
 
 pub inline fn CREATE_ABCk(
-    o: climits.Instruction,
-    a: climits.Instruction,
-    b: climits.Instruction,
-    c: climits.Instruction,
-    k: climits.Instruction,
-) climits.Instruction {
+    o: clua.Instruction,
+    a: clua.Instruction,
+    b: clua.Instruction,
+    c: clua.Instruction,
+    k: clua.Instruction,
+) clua.Instruction {
     return (o << POS_OP) | (a << POS_A) | (b << POS_B) | (c << POS_C) | (k << POS_k);
 }
 
 pub inline fn CREATE_ABx(
-    o: climits.Instruction,
-    a: climits.Instruction,
-    bc: climits.Instruction,
-) climits.Instruction {
+    o: clua.Instruction,
+    a: clua.Instruction,
+    bc: clua.Instruction,
+) clua.Instruction {
     return (o << POS_OP) | (a << POS_A) | (bc << POS_Bx);
 }
 
 pub inline fn CREATE_Ax(
-    o: climits.Instruction,
-    a: climits.Instruction,
-) climits.Instruction {
+    o: clua.Instruction,
+    a: clua.Instruction,
+) clua.Instruction {
     return (o << POS_OP) | (a << POS_A);
 }
 
 pub inline fn CREATE_sJ(
-    o: climits.Instruction,
-    j: climits.Instruction,
-    k: climits.Instruction,
-) climits.Instruction {
+    o: clua.Instruction,
+    j: clua.Instruction,
+    k: clua.Instruction,
+) clua.Instruction {
     return (o << POS_OP) | (j << POS_sJ) | (k << POS_k);
 }
 
@@ -461,7 +461,7 @@ pub const NUM_OPCODES = @intFromEnum(OpCode.OP_EXTRAARG) + 1;
 /// bit 5: instruction uses 'L->top' set by previous instruction (when B == 0)
 /// bit 6: instruction sets 'L->top' for next instruction (when C == 0)
 /// bit 7: instruction is an MM instruction (call a metamethod)
-pub const luaP_opmodes: [NUM_OPCODES]climits.lu_byte = .{
+pub const luaP_opmodes: [NUM_OPCODES]clua.lu_byte = .{
     //     MM OT IT T  A  mode             opcode
     opmode(0, 0, 0, 0, 1, OpMode.iABC), // OP_MOVE
     opmode(0, 0, 0, 0, 1, OpMode.iAsBx), //OP_LOADI
