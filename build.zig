@@ -44,7 +44,7 @@ const lib_src: []const []const u8 = &.{
     "src/lstrlib.c",
     "src/ltablib.c",
     "src/lutf8lib.c",
-    "src/linit.c",
+    // "src/linit.c",
 };
 
 const lib_include: []const []const u8 = &.{
@@ -103,8 +103,10 @@ pub fn build(b: *std.Build) void {
 
     const zig_lzio = zigObject(b, "lzio", &translated_imports, target, optimize);
     const zig_lopcodes = zigObject(b, "lopcodes", &translated_imports, target, optimize);
+    const zig_linit = zigObject(b, "linit", &translated_imports, target, optimize);
     base_mod.addObject(zig_lzio);
     base_mod.addObject(zig_lopcodes);
+    base_mod.addObject(zig_linit);
 
     const lib_mod = b.createModule(.{
         .target = target,
@@ -330,6 +332,7 @@ pub fn build(b: *std.Build) void {
     const check = b.step("check", "Check step for LSP");
     check.dependOn(&zig_lzio.step);
     check.dependOn(&zig_lopcodes.step);
+    check.dependOn(&zig_linit.step);
 }
 
 fn zigObject(
