@@ -224,16 +224,12 @@ pub fn build(b: *std.Build) void {
     if (build_shared) {
         const shared_install = b.addInstallArtifact(shared, .{});
         lua.step.dependOn(&shared_install.step);
+
+        lua.linkLibrary(shared);
         switch (target.result.os.tag) {
-            .macos => {
-                lua.root_module.addRPathSpecial("@loader_path/../lib");
-                lua.linkSystemLibrary(lib_name);
-            },
+            .macos => lua.root_module.addRPathSpecial("@loader_path/../lib"),
             .windows => {}, // dll would be next to the exe
-            else => {
-                lua.root_module.addRPathSpecial("$ORIGIN/../lib");
-                lua.linkSystemLibrary(lib_name);
-            },
+            else => lua.root_module.addRPathSpecial("$ORIGIN/../lib"),
         }
     } else {
         b.installArtifact(lib);
