@@ -68,23 +68,23 @@ pub fn build(b: *std.Build) void {
         },
     };
 
+    // Options
     const use_readline = b.option(bool, "use-readline", "Build with readline for linux") orelse false;
     const build_shared = b.option(bool, "shared", "Build as a shared library. Always true for MinGW") orelse target.result.isMinGW();
 
-    const base_mod = b.createModule(.{
+    // Steps
+    const test_suite_libs = b.step("test-suite-libs", "Compile lua test suite libraries");
+    const run_test_suite = b.step("test-suite", "Run lua test suite");
+    const check = b.step("check", "Check step for LSP");
+
+    // Modules
+    const lib_mod = b.createModule(.{
         .target = target,
         .optimize = optimize,
         .link_libc = true,
     });
 
-    const zig_lzio = zigObject(b, "lzio", &translated_imports, target, optimize);
-    const zig_lopcodes = zigObject(b, "lopcodes", &translated_imports, target, optimize);
-    const zig_linit = zigObject(b, "linit", &translated_imports, target, optimize);
-    base_mod.addObject(zig_lzio);
-    base_mod.addObject(zig_lopcodes);
-    base_mod.addObject(zig_linit);
-
-    const lib_mod = b.createModule(.{
+    const lua_mod = b.createModule(.{
         .target = target,
         .optimize = optimize,
         .link_libc = true,
@@ -96,18 +96,66 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
 
+    const modules: [3]*std.Build.Module = .{
+        lua_mod,
+        lib_mod,
+        luac_mod,
+    };
+
+    // C flags
     const cflags: []const []const u8 = &.{
         "-std=gnu99",
         "-Wall",
         "-Wextra",
     };
 
-    const modules: [3]*std.Build.Module = .{
-        base_mod,
-        lib_mod,
-        luac_mod,
-    };
+    // Compile steps
+    const lib_name = if (target.result.isMinGW()) base_name ++ "54" else base_name;
 
+    const lib = b.addLibrary(.{
+        .linkage = .static,
+        .name = lib_name,
+        .root_module = lib_mod,
+    });
+
+    const shared = b.addLibrary(.{
+        .linkage = .dynamic,
+        .name = lib_name,
+        .root_module = lib_mod,
+    });
+
+    const lua = b.addExecutable(.{
+        .name = base_name,
+        .root_module = lua_mod,
+    });
+
+    const luac = b.addExecutable(.{
+        .name = base_name ++ "c",
+        .root_module = luac_mod,
+    });
+
+    // Ported objects (temporary until all is in zig)
+    // Objects are added to the library module that the executables then link
+    const zig_lzio = zigObject(b, "lzio", &translated_imports, target, optimize);
+    const zig_lopcodes = zigObject(b, "lopcodes", &translated_imports, target, optimize);
+    const zig_linit = zigObject(b, "linit", &translated_imports, target, optimize);
+    lib_mod.addObject(zig_lzio);
+    lib_mod.addObject(zig_lopcodes);
+    lib_mod.addObject(zig_linit);
+
+    // Only the library needs the base source files
+    lib_mod.addCSourceFiles(.{
+        .flags = cflags,
+        .files = base_src,
+    });
+
+    // Lua exe source file
+    lua_mod.addCSourceFile(.{ .flags = cflags, .file = b.path("src/lua.c") });
+
+    // Luac exe source file
+    luac_mod.addCSourceFile(.{ .flags = cflags, .file = b.path("src/luac.c") });
+
+    // This part is common among all modules
     for (modules) |m| {
         // Not necessary but included to match original Makefile
         if (!target.result.isMinGW()) {
@@ -164,22 +212,10 @@ pub fn build(b: *std.Build) void {
         }
     }
 
-    base_mod.addCSourceFiles(.{
-        .flags = cflags,
-        .files = base_src,
-    });
-
-    const lib = b.addLibrary(.{
-        .linkage = .static,
-        .name = if (target.result.isMinGW()) base_name ++ "54" else base_name,
-        .root_module = base_mod,
-    });
-
-    const shared = b.addLibrary(.{
-        .linkage = .dynamic,
-        .name = if (target.result.isMinGW()) base_name ++ "54" else base_name,
-        .root_module = base_mod,
-    });
+    if (target.result.isMinGW()) {
+        lib_mod.addCMacro("LUA_BUILD_AS_DLL", "");
+        lua_mod.addCMacro("LUA_BUILD_AS_DLL", "");
+    }
 
     lib.installHeadersDirectory(
         b.path("src"),
@@ -187,26 +223,30 @@ pub fn build(b: *std.Build) void {
         .{ .include_extensions = lib_include },
     );
 
-    const lua = b.addExecutable(.{
-        .name = base_name,
-        .root_module = lib_mod,
-    });
-
     if (build_shared) {
-        lua.linkLibrary(shared);
+        const shared_install = b.addInstallArtifact(shared, .{});
+        lua.step.dependOn(&shared_install.step);
+        switch (target.result.os.tag) {
+            .macos => {
+                lua.root_module.addRPathSpecial("@loader_path/../lib");
+                lua.linkSystemLibrary(lib_name);
+            },
+            .windows => {}, // dll would be next to the exe
+            else => {
+                lua.root_module.addRPathSpecial("$ORIGIN/../lib");
+                lua.linkSystemLibrary(lib_name);
+            },
+        }
     } else {
+        b.installArtifact(lib);
         lua.linkLibrary(lib);
     }
-    lua.addCSourceFile(.{ .flags = cflags, .file = b.path("src/lua.c") });
-
-    const luac = b.addExecutable(.{
-        .name = base_name ++ "c",
-        .root_module = luac_mod,
-    });
 
     luac.linkLibrary(lib);
-    luac.addCSourceFile(.{ .flags = cflags, .file = b.path("src/luac.c") });
+    b.installArtifact(lua);
+    b.installArtifact(luac);
 
+    // Manuals
     b.installDirectory(.{
         .install_dir = .{ .custom = "man" },
         .install_subdir = "man1",
@@ -214,12 +254,11 @@ pub fn build(b: *std.Build) void {
         .include_extensions = &.{".1"},
     });
 
-    b.installArtifact(lib);
-    b.installArtifact(lua);
-    b.installArtifact(luac);
-
-    // Complete Test Suite Libs
-    // TODO: Add internal tests, Windows support? Better step dependencies?
+    // Test Suite
+    // TODO: Re-write
+    // Fix complete suite
+    // Fix Windows (I wish)
+    // Implement internal test suite
 
     const ts_level = b.option(TestSuiteLevel, "test-suite-level", "Lua test suite level (default = basic)") orelse .basic;
     if (ts_level == .internal) @panic("Not Implemented");
@@ -227,9 +266,7 @@ pub fn build(b: *std.Build) void {
     const ts_lib_names: []const []const u8 = &.{ "1", "11", "2", "21", "2-v2" };
     const ts_source_names: []const []const u8 = &.{ "lib1.c", "lib11.c", "lib2.c", "lib21.c", "lib22.c" };
 
-    const test_suite_libs = b.step("test-suite-libs", "Compile lua test suite libraries");
-
-    const run_test_suite = D: switch (ts_level) {
+    const ts_run = D: switch (ts_level) {
         .basic => {
             break :D b.addSystemCommand(&.{
                 "../zig-out/bin/lua",
@@ -245,8 +282,8 @@ pub fn build(b: *std.Build) void {
         },
     };
 
-    run_test_suite.setCwd(b.path("tests"));
-    run_test_suite.step.dependOn(b.getInstallStep());
+    ts_run.setCwd(b.path("tests"));
+    ts_run.step.dependOn(b.getInstallStep());
 
     switch (ts_level) {
         .complete => {
@@ -297,15 +334,13 @@ pub fn build(b: *std.Build) void {
                 },
             ));
             run_copy_files.step.dependOn(test_suite_libs);
-            run_test_suite.step.dependOn(&run_copy_files.step);
+            ts_run.step.dependOn(&run_copy_files.step);
         },
         else => {},
     }
 
-    b.step("test-suite", "Run lua test suite").dependOn(&run_test_suite.step);
+    run_test_suite.dependOn(&ts_run.step);
 
-    // LSP check step
-    const check = b.step("check", "Check step for LSP");
     check.dependOn(&zig_lzio.step);
     check.dependOn(&zig_lopcodes.step);
     check.dependOn(&zig_linit.step);
