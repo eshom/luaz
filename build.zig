@@ -225,11 +225,20 @@ pub fn build(b: *std.Build) void {
         const shared_install = b.addInstallArtifact(shared, .{});
         lua.step.dependOn(&shared_install.step);
 
-        lua.linkLibrary(shared);
+        // See: https://github.com/ziglang/zig/issues/17373
+        lua.addLibraryPath(shared.getEmittedBinDirectory());
+        lua.linkSystemLibrary2(shared.name, .{ .use_pkg_config = .no });
+
         switch (target.result.os.tag) {
-            .macos => lua.root_module.addRPathSpecial("@loader_path/../lib"),
             .windows => {}, // dll would be next to the exe
-            else => lua.root_module.addRPathSpecial("$ORIGIN/../lib"),
+            .macos => {
+                lua.root_module.addRPathSpecial("@loader_path/../lib");
+            },
+            else => {
+                lua.addLibraryPath(shared.getEmittedBinDirectory());
+                lua.linkSystemLibrary2(shared.name, .{ .use_pkg_config = .no });
+                lua.root_module.addRPathSpecial("$ORIGIN/../lib");
+            },
         }
     } else {
         b.installArtifact(lib);
