@@ -226,12 +226,11 @@ pub fn build(b: *std.Build) void {
         lua.step.dependOn(&shared_install.step);
 
         // See: https://github.com/ziglang/zig/issues/17373
-        lua.addLibraryPath(shared.getEmittedBinDirectory());
-        lua.linkSystemLibrary2(shared.name, .{ .use_pkg_config = .no });
-
         switch (target.result.os.tag) {
             .windows => {}, // dll would be next to the exe
             .macos => {
+                lua.addLibraryPath(shared.getEmittedBinDirectory());
+                lua.linkSystemLibrary2(shared.name, .{ .use_pkg_config = .no });
                 lua.root_module.addRPathSpecial("@loader_path/../lib");
             },
             else => {
