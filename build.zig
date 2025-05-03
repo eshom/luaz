@@ -196,9 +196,7 @@ pub fn build(b: *std.Build) void {
                 m.linkSystemLibrary("dl", .{});
             },
             else => {
-                if (target.result.isMinGW()) {
-                    m.addCMacro("LUA_BUILD_AS_DLL", "");
-                } else {
+                if (target.result.isMinGW()) {} else {
                     std.debug.panic(
                         "Unsupported target: arch: {}, os: {}, abi: {}",
                         .{
