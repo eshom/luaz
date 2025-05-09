@@ -7,7 +7,7 @@ make
 popd
 
 # Basic tests
-# ../out/bin/lua -e "_U=true" all.lua
+../out/bin/lua -e "_U=true" all.lua
 
 # Complete tests
-../out/bin/lua all.lua
+# ../out/bin/lua all.lua

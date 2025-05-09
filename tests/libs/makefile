@@ -2,10 +2,10 @@
 # of the version being tested
 LUA_DIR = ../../out/include
 
-CC = gcc
+CC = clang
 
 # compilation should generate Dynamic-Link Libraries
-CFLAGS = -Wall -std=gnu99 -O2 -I$(LUA_DIR) -fPIC -shared
+CFLAGS = -Wall -std=gnu99 -g -Og -I$(LUA_DIR) -fpic -shared
 
 # libraries used by the tests
 all: lib1.so lib11.so lib2.so lib21.so lib2-v2.so
