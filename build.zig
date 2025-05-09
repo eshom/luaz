@@ -227,7 +227,9 @@ pub fn build(b: *std.Build) void {
 
         // See: https://github.com/ziglang/zig/issues/17373
         switch (target.result.os.tag) {
-            .windows => {}, // dll would be next to the exe
+            .windows => {
+                lua.linkLibrary(shared);
+            },
             .macos => {
                 lua.addLibraryPath(shared.getEmittedBinDirectory());
                 lua.linkSystemLibrary2(shared.name, .{ .use_pkg_config = .no });
