@@ -210,11 +210,6 @@ pub fn build(b: *std.Build) void {
         }
     }
 
-    if (target.result.isMinGW()) {
-        lib_mod.addCMacro("LUA_BUILD_AS_DLL", "");
-        lua_mod.addCMacro("LUA_BUILD_AS_DLL", "");
-    }
-
     lib.installHeadersDirectory(
         b.path("src"),
         "",
