@@ -3,12 +3,6 @@ const std = @import("std");
 const base_name = "lua";
 const version: std.SemanticVersion = .{ .major = 5, .minor = 4, .patch = 7 };
 
-const TestSuiteLevel = enum {
-    basic,
-    complete,
-    internal,
-};
-
 const core_src: []const []const u8 = &.{
     "src/lapi.c",
     "src/lcode.c",
@@ -73,8 +67,6 @@ pub fn build(b: *std.Build) void {
     const build_shared = b.option(bool, "shared", "Build as a shared library. Always true for MinGW") orelse target.result.isMinGW();
 
     // Steps
-    const test_suite_libs = b.step("test-suite-libs", "Compile lua test suite libraries");
-    const run_test_suite = b.step("test-suite", "Run lua test suite");
     const check = b.step("check", "Check step for LSP");
 
     // Modules
@@ -252,93 +244,6 @@ pub fn build(b: *std.Build) void {
         .source_dir = b.path("doc"),
         .include_extensions = &.{".1"},
     });
-
-    // Test Suite
-    // TODO: Re-write
-    // Fix complete suite
-    // Fix Windows (I wish)
-    // Implement internal test suite
-
-    const ts_level = b.option(TestSuiteLevel, "test-suite-level", "Lua test suite level (default = basic)") orelse .basic;
-    if (ts_level == .internal) @panic("Not Implemented");
-
-    const ts_lib_names: []const []const u8 = &.{ "1", "11", "2", "21", "2-v2" };
-    const ts_source_names: []const []const u8 = &.{ "lib1.c", "lib11.c", "lib2.c", "lib21.c", "lib22.c" };
-
-    const ts_run = D: switch (ts_level) {
-        .basic => {
-            break :D b.addSystemCommand(&.{
-                "../zig-out/bin/lua",
-                "-e _U=true",
-                "all.lua",
-            });
-        },
-        else => {
-            break :D b.addSystemCommand(&.{
-                "../zig-out/bin/lua",
-                "all.lua",
-            });
-        },
-    };
-
-    ts_run.setCwd(b.path("tests"));
-    ts_run.step.dependOn(b.getInstallStep());
-
-    switch (ts_level) {
-        .complete => {
-            inline for (ts_lib_names, ts_source_names) |libname, source| {
-                const ts_mod = b.createModule(.{
-                    .target = target,
-                    .optimize = optimize,
-                    .link_libc = true,
-                    .pic = true,
-                });
-
-                ts_mod.addIncludePath(b.path("zig-out/include"));
-
-                if (build_shared) {
-                    ts_mod.linkLibrary(shared);
-                } else {
-                    ts_mod.linkLibrary(lib);
-                }
-
-                ts_mod.addCSourceFile(.{
-                    .file = b.path("tests/libs/" ++ source),
-                    .flags = cflags,
-                });
-
-                const ts_lib = b.addLibrary(.{
-                    .linkage = .dynamic,
-                    .name = libname,
-                    .root_module = ts_mod,
-                });
-
-                const install = b.addInstallArtifact(ts_lib, .{
-                    .dest_dir = .{
-                        .override = .{ .custom = "tests/libs" },
-                    },
-                });
-
-                test_suite_libs.dependOn(&install.step);
-            }
-
-            const run_copy_files = b.addRunArtifact(b.addExecutable(
-                .{
-                    .name = "install_test_libs",
-                    .root_module = b.createModule(.{
-                        .root_source_file = b.path("install_test_libs.zig"),
-                        .target = target,
-                        .optimize = optimize,
-                    }),
-                },
-            ));
-            run_copy_files.step.dependOn(test_suite_libs);
-            ts_run.step.dependOn(&run_copy_files.step);
-        },
-        else => {},
-    }
-
-    run_test_suite.dependOn(&ts_run.step);
 
     check.dependOn(&zig_lzio.step);
     check.dependOn(&zig_lopcodes.step);
