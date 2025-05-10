@@ -23,8 +23,8 @@ pub const Mbuffer = extern struct {
     buffsize: usize,
 };
 
-pub inline fn zgetc(z: *ZIO) u8 {
-    @compileLog(z);
+pub fn zgetc(z: *ZIO) u8 {
+    @compileLog(@src(), z);
     defer z.n -= 1;
     if (z.n > 0) {
         defer z.p.? += 1;
@@ -34,41 +34,41 @@ pub inline fn zgetc(z: *ZIO) u8 {
     }
 }
 
-pub inline fn luaZ_initbuffer(L: *const clua.lua_State, buff: *Mbuffer) c_int {
-    @compileLog(L, buff);
+pub fn luaZ_initbuffer(L: *const clua.lua_State, buff: *Mbuffer) c_int {
+    @compileLog(@src(), L, buff);
     // _ = L;
     buff.buffer = null;
     buff.buffsize = 0;
     return 0;
 }
 
-pub inline fn luaZ_buffer(buff: *const Mbuffer) ?[*:0]const u8 {
-    @compileLog(buff);
+pub fn luaZ_buffer(buff: *const Mbuffer) ?[*:0]const u8 {
+    @compileLog(@src(), buff);
     return buff.buffer;
 }
 
-pub inline fn luaZ_sizebuffer(buff: *const Mbuffer) usize {
-    @compileLog(buff);
+pub fn luaZ_sizebuffer(buff: *const Mbuffer) usize {
+    @compileLog(@src(), buff);
     return buff.buffsize;
 }
 
-pub inline fn luaZ_bufflen(buff: *const Mbuffer) usize {
-    @compileLog(buff);
+pub fn luaZ_bufflen(buff: *const Mbuffer) usize {
+    @compileLog(@src(), buff);
     return buff.n;
 }
 
-pub inline fn luaZ_buffremove(buff: *Mbuffer, i: comptime_int) void {
-    @compileLog(buff);
+pub fn luaZ_buffremove(buff: *Mbuffer, i: comptime_int) void {
+    @compileLog(@src(), buff);
     buff.n -= i;
 }
 
-pub inline fn luaZ_resizebuffer(L: *clua.lua_State, buff: *Mbuffer, size: comptime_int) void {
-    @compileLog(L, buff, size);
+pub fn luaZ_resizebuffer(L: *clua.lua_State, buff: *Mbuffer, size: comptime_int) void {
+    @compileLog(@src(), L, buff, size);
     buff.buffer = clua.luaM_reallocvchar(L, buff.buffer, buff.buffsize, size);
 }
 
-pub inline fn luaZ_freebuffer(L: *clua.lua_State, buff: *Mbuffer) void {
-    @compileLog(L, buff);
+pub fn luaZ_freebuffer(L: *clua.lua_State, buff: *Mbuffer) void {
+    @compileLog(@src(), L, buff);
     luaZ_resizebuffer(L, buff, 0);
 }
 
