@@ -131,9 +131,11 @@ pub fn build(b: *std.Build) void {
     const zig_lzio = zigObject(b, "lzio", &translated_imports, target, optimize);
     const zig_lopcodes = zigObject(b, "lopcodes", &translated_imports, target, optimize);
     const zig_linit = zigObject(b, "linit", &translated_imports, target, optimize);
+    const zig_lapi = zigObject(b, "lapi", &translated_imports, target, optimize);
     lib_mod.addObject(zig_lzio);
     lib_mod.addObject(zig_lopcodes);
     lib_mod.addObject(zig_linit);
+    // lib_mod.addObject(zig_lapi);
 
     // Only the library needs the base source files
     lib_mod.addCSourceFiles(.{
@@ -248,6 +250,7 @@ pub fn build(b: *std.Build) void {
     check.dependOn(&zig_lzio.step);
     check.dependOn(&zig_lopcodes.step);
     check.dependOn(&zig_linit.step);
+    check.dependOn(&zig_lapi.step);
 }
 
 fn zigObject(
