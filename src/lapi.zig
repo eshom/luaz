@@ -18,8 +18,7 @@ pub fn adjustresults(L: *clua.lua_State, nres: anytype) void {
 }
 
 /// Ensure the stack has at least 'n' elements
-pub fn api_checknelems(L: *clua.lua_State, n: anytype) void {
-    @compileLog(@src(), n);
+pub fn api_checknelems(L: *clua.lua_State, n: c_int) void {
     utils.api_check(L, n < (L.top.p - L.ci.?.*.func.p), "not enough elements in the stack");
 }
 
@@ -30,8 +29,7 @@ pub fn api_checknelems(L: *clua.lua_State, n: anytype) void {
 // with other number of wanted results, as well as functions with
 // variables to be closed, have an extra check.
 
-pub fn hastocloseCfunc(n: anytype) bool {
-    @compileLog(@src(), n);
+pub fn hastocloseCfunc(n: c_short) bool {
     return n < clua.LUA_MULTRET;
 }
 
