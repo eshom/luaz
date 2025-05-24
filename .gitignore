@@ -7,3 +7,6 @@ tests/libs/*.dylib
 tests/libs/*.dll
 tests/libs/*.pdb
 tests/libs/all
+
+# Translate Stuff
+macrocheck.c

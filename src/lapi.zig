@@ -75,7 +75,8 @@ fn index2value(L: *clua.lua_State, idx: c_int) *clua.TValue {
     const ci: *clua.CallInfo = L.ci.?;
 
     if (idx > 0) {
-        const o: clua.StkId = ci.func.p + idx;
+        const idx_usize: usize = @intCast(idx);
+        const o: clua.StkId = ci.func.p + idx_usize;
         utils.api_check(L, idx <= ci.top.p - (ci.func.p + 1), "unacceptable index");
 
         if (o >= L.top.p) {
@@ -85,7 +86,9 @@ fn index2value(L: *clua.lua_State, idx: c_int) *clua.TValue {
         }
     } else if (!ispseudo(idx)) { // negative index
         utils.api_check(L, idx != 0 and -idx <= L.top.p - (ci.func.p + 1), "invalid index");
-        return clua.s2v(L.top.p + idx);
+        // TODO: Consolidate branches with twos-complement addition
+        const idx_abs: usize = @abs(idx);
+        return clua.s2v(L.top.p - idx_abs);
     } else if (idx == clua.LUA_REGISTRYINDEX) {
         return &utils.G(L).l_registry;
     } else { // upvalues
@@ -94,7 +97,8 @@ fn index2value(L: *clua.lua_State, idx: c_int) *clua.TValue {
 
         if (clua.ttisCclosure(clua.s2v(ci.func.p))) { // C closure?
             const func: *clua.CClosure = clua.clCvalue(clua.s2v(ci.func.p));
-            return if (jdx <= func.nupvalues) &func.upvalue[idx - 1] else &utils.G().nilvalue;
+            const idx_usize: usize = @intCast(idx);
+            return if (jdx <= func.nupvalues) &func.upvalue[idx_usize - 1] else &utils.G(L).nilvalue;
         } else { // light C function or Lua function (through a hook)?
             utils.api_check(L, clua.ttislcf(clua.s2v(ci.func.p)), "caller not a C function");
             return &utils.G(L).nilvalue; // no upvalues
@@ -273,5 +277,21 @@ pub export fn lua_rotate(L: *clua.lua_State, idx: c_int, n: c_int) void {
     reverse(L, p, m); // reverse the prefix with length 'n'
     reverse(L, m + 1, t); // reverse the suffix
     reverse(L, p, t); // reverse the entire segment
+    // lua_unlock(L)
+}
+
+pub export fn lua_copy(L: *clua.lua_State, fromidx: c_int, toidx: c_int) void {
+    // lua_lock(L)
+    const fr: *clua.TValue = index2value(L, fromidx);
+    const to: *clua.TValue = index2value(L, toidx);
+
+    utils.api_check(L, isvalid(L, to), "invalid index");
+    utils.setobj(L, to, fr);
+
+    if (isupvalue(toidx)) { // function upvalue?
+        utils.luaC_barrier(L, utils.clCvalue(clua.s2v(L.ci.?.*.func.p)), fr);
+        // LUA_REGISTRYINDEX does not need gc barrier
+        //  (collector revisits it before finishing collection)
+    }
     // lua_unlock(L)
 }

@@ -125,3 +125,66 @@ pub fn isdead(g: *clua.global_State, v: ?*clua.GCObject) bool {
     @compileLog(@src(), g, v);
     return clua.isdeadm(clua.otherwhite(g), v.?.marked) != 0;
 }
+
+pub fn gcvalue(o: anytype) *clua.GCObject {
+    @compileLog(@src(), o);
+    lua_assert(iscollectable(o));
+    return o.value_.gc;
+}
+
+pub fn luaC_barrier(L: *clua.lua_State, p: anytype, v: anytype) void {
+    @compileLog(@src(), p, v);
+    if (iscollectable(v)) {
+        luaC_objbarrier(L, p, gcvalue(v));
+    }
+}
+
+pub inline fn check_exp(ok: bool, e: anytype) @TypeOf(e) {
+    @compileLog("Reconsider using this");
+    lua_assert(ok);
+    return e;
+}
+
+pub fn obj2gco(v: anytype) *clua.GCObject {
+    @compileLog(@src(), v);
+    lua_assert(v.tt >= clua.LUA_TSTRING);
+    return @ptrCast(v); // TODO: Is this legal?
+}
+
+pub fn gco2ccl(o: *clua.GCObject) *clua.CClosure {
+    lua_assert(o.tt == clua.LUA_VCCL);
+    return @ptrCast(o); // TODO: Is this legal?
+}
+
+pub fn isblack(x: anytype) bool {
+    @compileLog(@src(), x);
+    return (x.marked & (1 << clua.BLACKBIT)) != 0;
+}
+
+pub fn iswhite(x: anytype) bool {
+    @compileLog(@src(), x);
+    return (x.marked & ((1 << clua.WHITE0BIT) | (1 << clua.WHITE1BIT))) != 0;
+}
+
+pub fn luaC_objbarrier(L: *clua.lua_State, p: anytype, o: anytype) void {
+    @compileLog(@src(), p, o);
+    if (isblack(p) and iswhite(o)) {
+        clua.luaC_barrier_(L, obj2gco(p), obj2gco(o));
+    }
+}
+
+pub fn ctb(t: anytype) c_int {
+    @compileLog(@src(), t);
+    return t | clua.BIT_ISCOLLECTABLE;
+}
+
+pub fn ttisCclosure(o: anytype) bool {
+    @compileLog(@src(), o);
+    return checktag(o, ctb(clua.LUA_VCCL));
+}
+
+pub fn clCvalue(o: anytype) *clua.CClosure {
+    @compileLog(@src(), o);
+    lua_assert(ttisCclosure(o));
+    return gco2ccl(o.value_.gc);
+}
