@@ -68,6 +68,7 @@ pub fn build(b: *std.Build) void {
 
     // Steps
     const check = b.step("check", "Check step for LSP");
+    const test_suite = b.step("test-suite", "Run lua test suite on latest artifacts from container (basic tests only)");
 
     // Modules
     const lib_mod = b.createModule(.{
@@ -247,6 +248,25 @@ pub fn build(b: *std.Build) void {
         .include_extensions = &.{".1"},
     });
 
+    // Test Suite
+    const test_suite_run = b.addRunArtifact(
+        b.addExecutable(
+            .{
+                .name = "test_suite",
+                .root_module = b.createModule(
+                    .{
+                        .target = target,
+                        .optimize = .Debug,
+                        .root_source_file = b.path("test_suite.zig"),
+                    },
+                ),
+            },
+        ),
+    );
+
+    test_suite.dependOn(&test_suite_run.step);
+
+    // check step for LSP will analayze what it depends on
     check.dependOn(&zig_lzio.step);
     check.dependOn(&zig_lopcodes.step);
     check.dependOn(&zig_linit.step);
