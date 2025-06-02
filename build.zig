@@ -69,6 +69,7 @@ pub fn build(b: *std.Build) void {
     // Steps
     const check = b.step("check", "Check step for LSP");
     const test_suite = b.step("test-suite", "Run lua test suite on latest artifacts from container (basic tests only)");
+    const test_fuzz_repl = b.step("test-fuzz-repl", "Fuzz test lua REPL");
 
     // Modules
     const lib_mod = b.createModule(.{
@@ -87,6 +88,14 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .link_libc = true,
+    });
+
+    const repl_fuzz_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .fuzz = false,
+        .root_source_file = b.path(b.pathJoin(&.{ "tests", "fuzz", "repl.zig" })),
     });
 
     const modules: [3]*std.Build.Module = .{
@@ -247,6 +256,20 @@ pub fn build(b: *std.Build) void {
         .source_dir = b.path("doc"),
         .include_extensions = &.{".1"},
     });
+
+    // Tests
+    const repl_fuzz_test = b.addTest(.{
+        .root_module = repl_fuzz_mod,
+    });
+    repl_fuzz_mod.linkLibrary(lib);
+    repl_fuzz_mod.addImport("lua", translateHeader(b, b.path(b.pathJoin(&.{
+        "tests",
+        "fuzz",
+        "lua_api.h",
+    })), target, optimize));
+
+    const repl_fuzz_test_run = b.addRunArtifact(repl_fuzz_test);
+    test_fuzz_repl.dependOn(&repl_fuzz_test_run.step);
 
     // Test Suite
     const test_suite_run = b.addRunArtifact(
